@@ -23,9 +23,6 @@ stage('Upload to DockerHub'){
                 }
             }
 
-
-
-
         stage('docker stop container') {
          steps {
             sh 'docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop'
