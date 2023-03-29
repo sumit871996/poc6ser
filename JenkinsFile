@@ -1,0 +1,43 @@
+pipeline {
+     agent any
+     environment {
+        dockerImage = ''
+        registry = 'sumithpe/poc6ser'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub_id')
+    }
+    stages {
+stage('Build Docker Images') {
+            steps {
+                script {
+                    echo registry
+                    sh 'docker image build -t sumithpe/poc6ser .'
+                }
+            }
+        }
+stage('Upload to DockerHub'){
+            steps {
+                script {
+                       sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                        sh 'docker image push sumithpe/poc6ser:latest'
+                        }
+                }
+            }
+
+
+
+
+        stage('docker stop container') {
+         steps {
+            sh 'docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop'
+            sh 'docker container ls -a -fname=poc6sercon -q | xargs -r docker container rm'
+         }
+       }
+       stage('Docker Run') {
+        steps {
+            script {
+                sh 'docker container run -d -p 28962:80 --rm --name poc6sercon sumithpe/poc6ser'
+                }
+            }
+        }
+    }
+}
