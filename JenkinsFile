@@ -1,64 +1,112 @@
-pipeline {
-     agent any
-     environment {
-        dockerImage = ''
-        registry = 'sumithpe/poc6ser'
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub_id')
-        PATH = "$PATH:/root/.dotnet/tools"
-    }
-    stages {
-    stage('Build'){
+pipeline{
+     agent none
+     environment{   
+ 
+    DOCKERHUB_CREDENTIALS= credentials('dockerhub_id')
+    GITHUB_CREDENTIALS= credentials('github_id')
+    DOTNET_PATH = "/root/.dotnet/tools"
+    HARBOR_CREDENTIALS = credentials('harbor_id') 
+
+    
+} 
+     stages{
+         stage('Checkout') {
+         agent{
+     label 'poc-ser'
+     }
+          steps{ 
+          git branch: 'main', url: 'https://github.com/sumit871996/poc6ser.git'
+               }
+          }
+      
+          stage('Docker build'){
+          agent{
+     label 'poc-ser'
+     }
+          steps{
+               sh "docker image build -t sumithpe/poc6ser ."
+               }  
+          }
+          
+          
+          stage('Docker push'){
+          agent{
+     label 'poc-ser'
+     }
+          steps{
+               sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                        sh "docker image push sumithpe/poc6ser:latest"
+               
+          }
+          }   
+          stage('docker stop container') {
+        agent {
+     label 'poc-ser'
+     }
+         steps {
+        
+            sh "docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop"
+            sh "docker container ls -a -fname=poc6sercon -q | xargs -r docker container rm"
+            
+         }
+       }
+
+      stage('Docker Run') {
+       agent {
+     label 'poc-ser'
+     }
+        steps {
+          
+                sh "sudo docker container run -d -p 28962:80 --rm --name poc6sercon sumithpe/poc6ser"
+                
+            }
+        }
+
+stage('Building'){
+    agent{
+     label 'sonarQube_node'
+     }
             steps{
-                sh 'export PATH="$PATH:/root/.dotnet/tools"'
-                sh 'printenv'
-                sh 'whoami'
-                sh 'cd /var/lib/jenkins/workspace/trial/'
-                sh 'sudo dotnet sonarscanner begin /k:"poc6-ser" /d:sonar.host.url="http://35.225.86.148:9000"  /d:sonar.login="sqp_999cef012b0aaae1cd8a4b3def548f5eb365b351"'
-                sh 'sudo dotnet build'
+                   sh'''
+                   export PATH=$DOTNET_PATH:$PATH
+                   sudo dotnet sonarscanner begin /k:"pocser" /d:sonar.host.url="http://35.225.86.148:9000"  /d:sonar.login="sqp_21c6323ad7853705dd6affb290eadf1f92f1cd72"
+                   sudo dotnet build
+                   '''
             }
          }
         stage('SonarQube analysis') {
+        agent {
+     label 'sonarQube_node'
+     }
 //    def scannerHome = tool 'SonarScanner 4.0';
         steps{
          
         // If you have configured more than one global server connection, you can specify its name
 //      sh "${scannerHome}/bin/sonar-scanner"
-        sh 'sudo dotnet sonarscanner end /d:sonar.login="sqp_999cef012b0aaae1cd8a4b3def548f5eb365b351"'
+script {
+        sh'''
+        cd /home/sumit_bharat_mandlik/remotejenkins/workspace/employeeregistration_service/
+        sudo dotnet sonarscanner end /d:sonar.login="sqp_21c6323ad7853705dd6affb290eadf1f92f1cd72"
+        '''
+        }
     
         }
         }
-    
-    
-stage('Build Docker Images') {
-            steps {
-                script {
-                    echo registry
-                    sh 'docker image build -t sumithpe/poc6ser .'
-                }
-            }
-        }
-stage('Upload to DockerHub'){
-            steps {
-                script {
-                      sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                        sh 'docker image push sumithpe/poc6ser:latest'
 
-                        }
-                }
-            }
-
-        stage('docker stop container') {
-         steps {
-            sh 'docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop'
-            sh 'docker container ls -a -fname=poc6sercon -q | xargs -r docker container rm'
-         }
-       }
-       stage('Docker Run') {
-        steps {
-            script {
-                sh 'docker container run -d -p 28962:80 --rm --name poc6sercon sumithpe/poc6ser'
-                }
-            }
-        }
+           stage('Push to harbor'){
+          agent{
+        label 'harbor_node'
     }
+            steps{
+            sh "docker image prune -af"
+                sh "docker image pull sumithpe/poc6ser"
+                  sh "docker image tag sumithpe/poc6ser 20.21.104.152/employeerreqistartion/poc6ser"
+                sh 'echo $HARBOR_CREDENTIALS_PSW | docker login 20.21.104.152 -u $HARBOR_CREDENTIALS_USR --password-stdin'  
+                sh "docker image push 20.21.104.152/employeerreqistartion/poc6ser"
+            }
+        }
+
+  
+          
+     }
 }
