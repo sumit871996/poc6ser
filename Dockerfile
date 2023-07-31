@@ -6,6 +6,8 @@ EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
+RUN chgrp -R 0 . && chmod -R g=u .
+    
 COPY ["EmployeeRegistrationService.csproj", "."]
 RUN dotnet restore "./EmployeeRegistrationService.csproj"
 COPY . .
