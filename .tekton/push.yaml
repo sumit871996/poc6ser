@@ -8,7 +8,7 @@ metadata:
     pipelinesascode.tekton.dev/task: git-clone
   name: pipelinerun-generic
 spec:
-workspaces:
+  workspaces:
   - name: imageidentification
   params:
   - name: repo_url
