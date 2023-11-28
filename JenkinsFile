@@ -57,7 +57,7 @@ pipeline{
      }
         steps {
           
-                sh "sudo docker container run -d -p 28962:80 --rm --name poc6sercon sumithpe/poc6ser"
+                sh "sudo docker container run -d -p 28962:80 --name poc6sercon sumithpe/poc6ser"
                 
             }
         }
