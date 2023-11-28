@@ -1,0 +1,71 @@
+pipeline{
+     agent none
+     environment{   
+ 
+    DOCKERHUB_CREDENTIALS= credentials('dockerhub_id')
+    GITHUB_CREDENTIALS= credentials('github_id')
+    DOTNET_PATH = "/root/.dotnet/tools"
+    HARBOR_CREDENTIALS = credentials('harbor_id') 
+
+    
+} 
+     stages{
+         stage('Checkout') {
+         agent{
+     label 'poc6-ser'
+     }
+          steps{ 
+          git branch: 'main', url: 'https://github.com/sumit871996/poc6ser.git'
+               }
+          }
+      
+          stage('Docker build'){
+          agent{
+     label 'poc6-ser'
+     }
+          steps{
+               sh "docker image build -t sumithpe/poc6ser ."
+               }  
+          }
+          
+          
+          stage('Docker push'){
+          agent{
+     label 'poc6-ser'
+     }
+          steps{
+               sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                        sh "docker image push sumithpe/poc6ser:latest"
+               
+          }
+          }   
+          stage('docker stop container') {
+        agent {
+     label 'poc6-ser'
+     }
+         steps {
+        
+            sh "docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop"
+            sh "docker container ls -a -fname=poc6sercon -q | xargs -r docker container rm"
+            
+         }
+       }
+
+      stage('Docker Run') {
+       agent {
+     label 'poc6-ser'
+     }
+        steps {
+          
+                sh "sudo docker container run -d -p 28962:80 --rm --name poc6sercon sumithpe/poc6ser"
+                
+            }
+        }
+
+
+    
+
+  
+          
+     }
+}
