@@ -10,7 +10,14 @@ namespace EmployeeRegistrationService.Service
     public class PlaceInfoService : IPlaceInfoService
     {
         //public string sConStr = "Data Source=PEFLBELH3T;Initial Catalog=EmployeesDB;Integrated Security=True";
-        public string sConStr = "Server=34.30.132.99,1433;Database=EmployeeDb;User Id=SA;Password=Sumit@mssql8796";
+        //public string sConStr = "Server=34.30.132.99,1433;Database=EmployeeDb;User Id=SA;Password=Sumit@mssql8796";
+        private readonly string sConStr;
+
+        public PlaceInfoService(IConfiguration configuration)
+        {
+            sConStr = configuration.GetConnectionString("EmployeeDb");
+        }
+
         public int Add(PlaceInfo placeInfo)
         {
             string sQry = "INSERT INTO [EmployeeDetails] ([Name],[Place],[About],[City],[State],[Country]) " +
