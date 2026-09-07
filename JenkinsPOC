@@ -1,56 +1,67 @@
-pipeline{
-     agent any
-     environment{   
- 
-    DOCKERHUB_CREDENTIALS= credentials('dockerhub_id')
-    GITHUB_CREDENTIALS= credentials('github_id')
-    DOTNET_PATH = "/root/.dotnet/tools"
-    HARBOR_CREDENTIALS = credentials('harbor_id') 
+pipeline {
+    agent any
 
-    
-} 
-     stages{
-         stage('Checkout') {
-          steps{ 
-          git branch: 'main', url: 'https://github.com/sumit871996/poc6ser.git'
-               }
-          }
-      
-          stage('Docker build'){
-          steps{
-               sh "docker image build -t 10.3.17.126/techpro/poc6ser ."
-               }  
-          }
-          
-          
-          stage('Docker push'){
-          steps{
-               sh 'echo $HARBOR_CREDENTIALS_PSW | docker login 10.3.17.126 -u $HARBOR_CREDENTIALS_USR --password-stdin'
-                        sh "docker image push 10.3.17.126/techpro/poc6ser:latest"
-               
-          }
-          }   
-          stage('docker stop container') {
-         steps {
-        
-            sh "docker ps -f name=poc6sercon  -q | xargs --no-run-if-empty docker container stop"
-            sh "docker container ls -a -fname=poc6sercon -q | xargs -r docker container rm"
-            
-         }
-       }
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub_id')
+        GITHUB_CREDENTIALS = credentials('github_id')
+        HARBOR_CREDENTIALS = credentials('harbor_id')
 
-      stage('Docker Run') {
-        steps {
-          
-                sh "sudo docker container run -d -p 28962:80 --name poc6sercon 10.3.17.126/techpro/poc6ser"
-                
+        HTTP_PROXY  = 'http://10.120.125.146:8080'
+        HTTPS_PROXY = 'http://10.120.125.146:8080'
+        NO_PROXY    = 'localhost,127.0.0.1,10.3.17.126'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/sumit871996/poc6ser.git'
             }
         }
 
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker image build \
+                      --build-arg HTTP_PROXY="$HTTP_PROXY" \
+                      --build-arg HTTPS_PROXY="$HTTPS_PROXY" \
+                      --build-arg NO_PROXY="$NO_PROXY" \
+                      -t 10.3.17.126/techpro/poc6ser:latest .
+                '''
+            }
+        }
 
-    
+        stage('Docker Push') {
+            steps {
+                sh '''
+                    echo "$HARBOR_CREDENTIALS_PSW" |
+                      docker login 10.3.17.126 \
+                        --username "$HARBOR_CREDENTIALS_USR" \
+                        --password-stdin
 
-  
-          
-     }
+                    docker image push 10.3.17.126/techpro/poc6ser:latest
+                '''
+            }
+        }
+
+        stage('Remove Existing Container') {
+            steps {
+                sh '''
+                    docker container rm --force poc6sercon 2>/dev/null || true
+                '''
+            }
+        }
+
+        stage('Docker Run') {
+            steps {
+                sh '''
+                    docker container run \
+                      --detach \
+                      --publish 28962:80 \
+                      --name poc6sercon \
+                      10.3.17.126/techpro/poc6ser:latest
+                '''
+            }
+        }
+    }
 }
