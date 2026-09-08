@@ -12,12 +12,12 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/sumit871996/poc6ser.git'
-            }
-        }
+        //stage('Checkout') {
+           // steps {
+          //      git branch: 'main',
+              //      url: 'https://github.com/sumit871996/poc6ser.git'
+        //    }
+     //   }
 
         stage('Prepare Image Tag') {
     steps {
