@@ -19,6 +19,17 @@ pipeline {
             }
         }
 
+        stage('Prepare Image Tag') {
+    steps {
+        script {
+           env.APP_VERSION = sh(
+    script: "sed -n 's:.*<Version>\\(.*\\)</Version>.*:\\1:p' EmployeeRegistrationService.csproj",
+    returnStdout: true
+).trim()
+        }
+    }
+}
+
         stage('Docker Build') {
             steps {
                 sh '''
@@ -26,7 +37,7 @@ pipeline {
                       --build-arg HTTP_PROXY="$HTTP_PROXY" \
                       --build-arg HTTPS_PROXY="$HTTPS_PROXY" \
                       --build-arg NO_PROXY="$NO_PROXY" \
-                      -t 10.3.17.126/techpro/poc6ser:latest .
+                      -t 10.3.17.126/techpro/poc6ser:"$APP_VERSION" .
                 '''
             }
         }
@@ -39,7 +50,7 @@ pipeline {
                         --username "$HARBOR_CREDENTIALS_USR" \
                         --password-stdin
 
-                    docker image push 10.3.17.126/techpro/poc6ser:latest
+                    docker image push 10.3.17.126/techpro/poc6ser:"$APP_VERSION"
                 '''
             }
         }
@@ -69,13 +80,13 @@ pipeline {
                     docker container run \
                       --detach \
                       --publish 28962:80 \
-                                            --network poc6-network \
+                      --network poc6-network \
                       --name poc6sercon \
-                      10.3.17.126/techpro/poc6ser:latest
+                      10.3.17.126/techpro/poc6ser:"$APP_VERSION"
 
-                                        docker exec poc6sercon getent hosts employeedb
-                                        docker exec poc6sercon bash -c 'timeout 5 bash -c "echo > /dev/tcp/employeedb/1433"'
-                                        echo "Application container can reach employeedb:1433"
+                    docker exec poc6sercon getent hosts employeedb
+                    docker exec poc6sercon bash -c 'timeout 5 bash -c "echo > /dev/tcp/employeedb/1433"'
+                    echo "Application container can reach employeedb:1433"
                 '''
             }
         }
