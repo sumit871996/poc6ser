@@ -18,7 +18,7 @@ pipeline {
               //      url: 'https://github.com/sumit871996/poc6ser.git'
         //    }
      //   }
-
+ // dummy commit
         stage('Prepare Image Tag') {
     steps {
         script {
