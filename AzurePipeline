@@ -1,0 +1,112 @@
+```yaml
+# Docker
+# Build, push and run Docker container
+
+trigger:
+- master
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+  imageName: 'sumithpe/poc6ser'
+  containerName: 'poc6sercon'
+
+stages:
+
+# --------------------------------------------------
+# Build Docker image
+# --------------------------------------------------
+- stage: Build
+  displayName: Build image
+
+  jobs:
+  - job: Build
+    displayName: Build
+
+    pool:
+      name: AzureVM-Pool
+
+    steps:
+    - bash: |
+        docker build \
+          -t $(imageName):latest \
+          -t $(imageName):$(tag) \
+          $(Build.SourcesDirectory)
+      displayName: Build an image
+
+
+# --------------------------------------------------
+# Docker Push
+# --------------------------------------------------
+- stage: DockerPush
+  displayName: Docker push
+
+  dependsOn: Build
+
+  jobs:
+  - job: DockerPush
+    displayName: Docker push
+
+    pool:
+      name: AzureVM-Pool
+
+    steps:
+    - bash: |
+        echo "$(DOCKERHUB_PASSWORD)" | docker login \
+          -u "$(DOCKERHUB_USERNAME)" \
+          --password-stdin
+
+        docker image push $(imageName):latest
+      displayName: Push image to Docker Hub
+
+
+# --------------------------------------------------
+# Stop existing container
+# --------------------------------------------------
+- stage: DockerStop
+  displayName: Docker stop container
+
+  dependsOn: DockerPush
+
+  jobs:
+  - job: DockerStop
+    displayName: Docker stop container
+
+    pool:
+      name: AzureVM-Pool
+
+    steps:
+    - bash: |
+        docker ps -f name=$(containerName) -q |
+          xargs --no-run-if-empty docker container stop
+
+        docker container ls -a -f name=$(containerName) -q |
+          xargs -r docker container rm
+      displayName: Stop and remove container
+
+
+# --------------------------------------------------
+# Docker Run
+# --------------------------------------------------
+- stage: DockerRun
+  displayName: Docker Run
+
+  dependsOn: DockerStop
+
+  jobs:
+  - job: DockerRun
+    displayName: Docker Run
+
+    pool:
+      name: AzureVM-Pool
+
+    steps:
+    - bash: |
+        sudo docker container run -d \
+          -p 28962:80 \
+          --name $(containerName) \
+          $(imageName)
+      displayName: Run Docker container
+```
