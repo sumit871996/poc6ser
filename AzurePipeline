@@ -9,9 +9,16 @@ resources:
 - repo: self
 
 variables:
-  tag: '$(Build.BuildId)'
-  imageName: 'sumithpe/poc6ser'
-  containerName: 'poc6sercon'
+- group: DockerHubCredentials
+
+- name: tag
+  value: '$(Build.BuildId)'
+
+- name: imageName
+  value: 'sumithpe/poc6ser'
+
+- name: containerName
+  value: 'poc6sercon'
 
 stages:
 
